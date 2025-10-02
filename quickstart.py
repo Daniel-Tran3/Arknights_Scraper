@@ -12,9 +12,10 @@ from googleapiclient.errors import HttpError
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 # The ID and range of a sample spreadsheet.
-SAMPLE_SPREADSHEET_ID = "1r2O0kCwzh3_9ZERD1WnaEViZ10VFema5aizBdYyK_Ug"
-SAMPLE_READ_RANGE = "Tickets!A2:A200"
-SAMPLE_WRITE_RANGE = "Tickets!F2:H200"
+SPREADSHEET_ID = "1r2O0kCwzh3_9ZERD1WnaEViZ10VFema5aizBdYyK_Ug"
+READ_RANGE = "Tickets!A2:A200"
+TICKETS_WRITE_RANGE = "Tickets!F2:H200"
+ORUNDUM_WRITE_RANGE = "Orundum!I2:J200"
 LIMITED = ["Celebration", "Festival", "Carnival"]
 EVENT_TYPES = ["Side Story", "Intermezzo"]
 
@@ -49,7 +50,7 @@ def main():
     sheet = service.spreadsheets()
     result = (
         sheet.values()
-        .get(spreadsheetId=SAMPLE_SPREADSHEET_ID, range=SAMPLE_READ_RANGE)
+        .get(spreadsheetId=SPREADSHEET_ID, range=READ_RANGE)
         .execute()
     )
     values = result.get("values", [])
@@ -61,7 +62,8 @@ def main():
 
     event_list = event_getter.main()
     
-    new_vals = []
+    ticket_vals = []
+    orundum_vals = []
     event_idx = 0
     new_event = True
     for i in range(len(values)):
@@ -69,6 +71,7 @@ def main():
       name = "N/A"
       event_shop = 0
       limited_free = 0
+      lottery = 0
       if event_idx < len(event_list):
         if (curr_date >= event_list[event_idx][1] and curr_date <= event_list[event_idx][2]):
           name = event_list[event_idx][0]
@@ -77,21 +80,37 @@ def main():
               event_shop = 3
             if (any(elem in name for elem in LIMITED)):
               if (curr_date == event_list[event_idx][1]):
-                limited_free = 11
-              elif (curr_date <= event_list[event_idx][1] + datetime.timedelta(days=13)):
-                limited_free = 1
-        new_vals.append([limited_free, event_shop, name])
+                limited_free = limited_free + 10
+              if (curr_date <= event_list[event_idx][1] + datetime.timedelta(days=13)):
+                limited_free = limited_free + 1
+                lottery = lottery + 550
         new_event = False
         if (curr_date == event_list[event_idx][2]):
           event_idx = event_idx + 1
           new_event = True
+      ticket_vals.append([limited_free, event_shop, name])
+      orundum_vals.append([lottery, name])
+
+    # Update HH Ticket Sheet
     result = (
         sheet.values()
         .update(
-            spreadsheetId=SAMPLE_SPREADSHEET_ID,
-            range=SAMPLE_WRITE_RANGE,
+            spreadsheetId=SPREADSHEET_ID,
+            range=TICKETS_WRITE_RANGE,
             valueInputOption="USER_ENTERED",
-            body={"values": new_vals})
+            body={"values": ticket_vals})
+        .execute()
+    )
+    print(f"{result.get('updatedCells')} cells updated.")
+
+    # Update Orundum Sheet
+    result = (
+        sheet.values()
+        .update(
+            spreadsheetId=SPREADSHEET_ID,
+            range=ORUNDUM_WRITE_RANGE,
+            valueInputOption="USER_ENTERED",
+            body={"values": orundum_vals})
         .execute()
     )
     print(f"{result.get('updatedCells')} cells updated.")
