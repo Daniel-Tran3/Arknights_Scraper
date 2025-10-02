@@ -8,6 +8,7 @@ Calculates approximate number of pulls that a player can accumulate by any given
 Approximates Global Event dates by adding 166 days to CN Event dates.
 Accounts for:
 - 1700 Orundum per week for Annihilation missions
+- 600 Orundum per month for certificate shop (awarded on the 1st of every month)
 - 500 Orundum per week for weekly missions
 - 100 Orundum per day for daily missions
 - Free monthly card awarded on 10/8/2025 through 11/6/2025 (200 Orundum per day for the duration)
