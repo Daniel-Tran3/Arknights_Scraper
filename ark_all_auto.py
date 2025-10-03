@@ -14,6 +14,7 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 # The ID and range of a sample spreadsheet.
 SPREADSHEET_ID = "182mhYXHd1GmehGzgd-wRTKXwlQY_A5qCy4tbW_oTTgY"
 DAYS = 200
+PULL_READ_RANGE = "User_Values!A1:B10"
 PULL_WRITE_RANGE = "Pulls_Auto!A1:H" + str(DAYS+1)
 TICKETS_WRITE_RANGE = "Tickets_Auto!A1:H" + str(DAYS+1)
 ORUNDUM_WRITE_RANGE = "Orundum_Auto!A1:J" + str(DAYS+1)
@@ -52,17 +53,31 @@ def main():
     # Call the Sheets API
     sheet = service.spreadsheets()
 
+    # Get event data
     event_list = event_getter.main()
 
+    # Read user values from user values sheet
+    result = (
+        sheet.values()
+        .get(spreadsheetId=SPREADSHEET_ID, range=PULL_READ_RANGE)
+        .execute()
+    )
+
+    pull_dates = result.get("values", [])
+
+    # Initialize write data for pull, ticket, and orundum sheets
     pull_vals = []
     ticket_vals = []
     orundum_vals = []
     event_idx = 0
     monthly_card_idx = 0
+    pull_date_idx = 1
     new_event = True
     today = datetime.datetime.today()
-    starting_orundum = 0
-    starting_tickets = 0
+    starting_orundum = "=User_Values!D2"
+    starting_tickets = "=User_Values!E2"
+    next_pulls_tried = 0
+
 
     # Add header row.
     pull_vals.append(["Date", "Day of Week", "Orundum", "Tickets", "Pulls", "Pulls Spent", "Pulls Tried", "Event Name"])
@@ -87,7 +102,10 @@ def main():
       pulls_tickets = f"=Tickets_Auto!C{row}"
       pulls_pulls   = f"=FLOOR(C{row}/600) + D{row}"
       pulls_spent   = f"=Orundum_Auto!D{row}/600 + Tickets_Auto!D{row}"
-      pulls_tried   = 0
+      pulls_tried   = next_pulls_tried
+
+      # To self-reference, must subtract pulls on the day AFTER we get them.
+      next_pulls_tried = 0
 
       # Orundum sheet initial row (to avoid self-reference, formulas start after first row)
       orundum_orundum      = starting_orundum
@@ -104,6 +122,11 @@ def main():
       tickets_monthly   = 0
       tickets_ev_login  = 0
       tickets_ev_reward = 0
+
+      if pull_date_idx < len(pull_dates):
+        if (curr_date.date() == datetime.datetime.strptime(pull_dates[pull_date_idx][0], "%m/%d/%Y").date()):
+          pulls_tried = pulls_tried + int(pull_dates[pull_date_idx][1])
+          pull_date_idx = pull_date_idx + 1
 
       
       if (i > 0):
@@ -133,16 +156,18 @@ def main():
           if (curr_date >= event_list[event_idx][1] and curr_date <= event_list[event_idx][2]):
             name = event_list[event_idx][0]
             if (any(elem in name for elem in EVENT_TYPES)):
-              if (curr_date == event_list[event_idx][1] or new_event):
+              if (curr_date.date() == event_list[event_idx][1].date() or new_event):
                 tickets_ev_reward = 3
               if (any(elem in name for elem in LIMITED)):
-                if (curr_date == event_list[event_idx][1]):
+                if (curr_date.date() == event_list[event_idx][1].date()):
                   tickets_ev_login = tickets_ev_login + 10
-                if (curr_date <= event_list[event_idx][1] + datetime.timedelta(days=13)):
+                  next_pulls_tried = next_pulls_tried + 10
+                if (curr_date.date() <= (event_list[event_idx][1] + datetime.timedelta(days=13)).date()):
                   tickets_ev_login = tickets_ev_login + 1
+                  next_pulls_tried = next_pulls_tried + 1
                   orundum_lottery = orundum_lottery + 550
           new_event = False
-          if (curr_date >= event_list[event_idx][2]):
+          if (curr_date.date() >= event_list[event_idx][2].date()):
             event_idx = event_idx + 1
             new_event = True
       pull_vals.append([curr_date_str, day_of_week, pulls_orundum, pulls_tickets, pulls_pulls, pulls_spent, pulls_tried, name])
