@@ -13,12 +13,12 @@ Used to update [this Google Sheet](https://docs.google.com/spreadsheets/d/1r2O0k
 Download quickstart.py, event_getter.py, and create your own credentials.json file (see Google Sheets API for more info).
 Run "python quickstart.py".
 
-
 ark_all_auto.py:
 Calculates approximate number of pulls that a player can accumulate by any given event date, starting on current date.
-Starting values are 0 Orundum and 0 Headhunting Tickets.
 Used to update [this Google Sheet](https://docs.google.com/spreadsheets/d/182mhYXHd1GmehGzgd-wRTKXwlQY_A5qCy4tbW_oTTgY/edit?usp=sharing).
-Download ark_all_auto.py, event_getter.py, and create your own credentials.json file (see Google Sheets API for more info).
+Download ark_all_auto.py, upload_user_val.py, event_getter.py, and create your own credentials.json file (see Google Sheets API for more info).
+Create pull_dates.csv and starting_vals.csv files (or download and modify the files from this repository) to account for personal data.
+Run "python upload_user_val.py".
 Run "python ark_all_auto.py".
 
 Notes:
